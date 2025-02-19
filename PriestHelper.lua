@@ -3,7 +3,7 @@ PriestHelper = {}
 
 -- Addon Constants
 local SPELL_PWF = "Power Word: Fortitude"
-local SPELL_LESSER_HEAL = "Lesser Heal(rank 3)"
+local SPELL_LESSER_HEAL = "Flash Heal"
 local SPELL_RENEW = "Renew"
 local SPELL_SMITE = "Smite"
 local SPELL_SHOOT = "Shoot"
@@ -14,8 +14,27 @@ local SPELL_PWS = "Power Word: Shield"
 local SPELL_FADE = "Fade"
 local SPELL_PSCREAM = "Psychic Scream"
 local SPELL_INNER_FIRE = "Inner Fire"
+local SPELL_DISPEL = "Dispel Magic"
 local HEALTH_THRESHOLD = 70 -- Heal if health is below 90%
 
+local debuffsToDispel = {
+    "ShadowWordPain",
+    -- Add more debuff names here as needed
+}
+
+local function HasDebuff(unit)
+    for i = 1, 16 do
+        local name = UnitDebuff(unit, i)
+        if name then
+            for _, debuff in ipairs(debuffsToDispel) do
+                if strfind(name, debuff) then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
 
 -- Function to buff a unit with Power Word: Fortitude if they are not already buffed
 local function BuffUnit(unit)
@@ -26,6 +45,15 @@ local function BuffUnit(unit)
     end
     return false
 end
+local function DispelUnit(unit)
+    if UnitExists(unit) and not UnitIsDeadOrGhost(unit) then
+        CastSpellByName(SPELL_DISPEL)
+        SpellTargetUnit(unit)
+        return true
+    end
+    return false
+end
+
 local function BuffInnerFire()
     if not buffed(SPELL_INNER_FIRE, "player") then
         CastSpellByName(SPELL_INNER_FIRE)
@@ -45,6 +73,28 @@ local function BuffParty()
         local partyMember = "party" .. i
         if BuffUnit(partyMember) then
             return
+        end
+    end
+end
+
+local function DispelParty()
+    if HasDebuff("player") then
+        if UnitExists("target") and UnitCanAttack("player", "target") then
+            ClearTarget()
+        end
+        if DispelUnit("player") then
+        return
+        end
+    end
+    for i = 1, 4 do
+        local partyMember = "party" .. i
+        if HasDebuff(partyMember) then
+            if UnitExists("target") and UnitCanAttack("player", "target") then
+            ClearTarget()
+        end
+            if DispelUnit(partyMember) then
+        return
+            end
         end
     end
 end
@@ -72,6 +122,8 @@ local function HealParty()
             if health < lowestHealthPercent then
                 lowestHealthUnit = partyMember
                 lowestHealthPercent = health
+
+
             end
         end
     end
@@ -103,13 +155,18 @@ local function HealParty()
         end
 
         -- Cast Power Word: Shield if health is below 90% and not affected by weakened soul
-        if lowestHealthPercent < 80 and not db("AshesToAshes") and UnitAffectingCombat(lowestHealthUnit) and (UnitMana("player")/UnitManaMax("player"))*100 > 5 then
+        if lowestHealthPercent < 90 and not db("AshesToAshes") and UnitAffectingCombat(lowestHealthUnit) and (UnitMana("player")/UnitManaMax("player"))*100 > 5 then
             CastSpellByName(SPELL_PWS)
             SpellTargetUnit(lowestHealthUnit)
             return true
         end
+    --    if lowestHealthPercent < 100 and db("Nature_Regenerate") and UnitAffectingCombat(lowestHealthUnit) and (UnitMana("player")/UnitManaMax("player"))*100 > 5 then
+    --        CastSpellByName(SPELL_DISPEL)
+    --        SpellTargetUnit(lowestHealthUnit)
+    --        return true
+    --    end
         -- cast renew
-        if lowestHealthPercent < 80 and not b("Renew") and (UnitMana("player")/UnitManaMax("player"))*100 > 10 then
+        if lowestHealthPercent < 90 and not b("Renew") and (UnitMana("player")/UnitManaMax("player"))*100 > 10 then
             CastSpellByName(SPELL_RENEW)
             SpellTargetUnit(lowestHealthUnit)
             return true
@@ -214,6 +271,7 @@ SlashCmdList["PRIESTHELPER"] = function()
     -- If no healing is needed, proceed to buff and assist
     if not healingNeeded then
         -- Buff party members and myself
+        DispelParty()
         BuffParty()
         BuffInnerFire()
 
