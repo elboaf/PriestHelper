@@ -45,6 +45,7 @@ local function BuffUnit(unit)
     end
     return false
 end
+
 local function DispelUnit(unit)
     if UnitExists(unit) and not UnitIsDeadOrGhost(unit) then
         CastSpellByName(SPELL_DISPEL)
@@ -59,7 +60,6 @@ local function BuffInnerFire()
         CastSpellByName(SPELL_INNER_FIRE)
     end
 end
-
 
 -- Function to buff party members and myself with Power Word: Fortitude
 local function BuffParty()
@@ -83,23 +83,22 @@ local function DispelParty()
             ClearTarget()
         end
         if DispelUnit("player") then
-        return
+            return
         end
     end
     for i = 1, 4 do
         local partyMember = "party" .. i
         if HasDebuff(partyMember) then
             if UnitExists("target") and UnitCanAttack("player", "target") then
-            ClearTarget()
-        end
+                ClearTarget()
+            end
             if DispelUnit(partyMember) then
-        return
+                return
             end
         end
     end
 end
 
--- Function to heal the lowest health party member (including myself)
 -- Function to heal the lowest health party member (including myself)
 local function HealParty()
     local lowestHealthUnit = nil
@@ -122,8 +121,6 @@ local function HealParty()
             if health < lowestHealthPercent then
                 lowestHealthUnit = partyMember
                 lowestHealthPercent = health
-
-
             end
         end
     end
@@ -131,48 +128,72 @@ local function HealParty()
     -- Heal the lowest health unit based on thresholds
     if lowestHealthUnit then
         function db(k)
-            for i=1,16 do 
-                if strfind(tostring(UnitDebuff(lowestHealthUnit,i)),k) then 
-                    return 1 
-                end 
-            end 
-        end 
+            for i = 1, 16 do
+                if strfind(tostring(UnitDebuff(lowestHealthUnit, i)), k) then
+                    return 1
+                end
+            end
+        end
+
         function b(k)
-            for i=1,16 do 
-                if strfind(tostring(UnitBuff(lowestHealthUnit,i)),k) then 
-                    return 1 
-                end 
-            end 
-        end 
+            for i = 1, 16 do
+                if strfind(tostring(UnitBuff(lowestHealthUnit, i)), k) then
+                    return 1
+                end
+            end
+        end
 
         -- cast fade if we took damage and its off cd
         if UnitAffectingCombat("player") and UnitHealth("player") / UnitHealthMax("player") * 100 < 25 then
-            local c,s=CastSpellByName,SPELL_PSCREAM;local i=nil;for j=1,180 do local n=GetSpellName(j,BOOKTYPE_SPELL);if n and strfind(n,s) then i=j;break;end end if i then if GetSpellCooldown(i,BOOKTYPE_SPELL)<1 then c(s)else end end
+            local c, s = CastSpellByName, SPELL_PSCREAM
+            local i = nil
+            for j = 1, 180 do
+                local n = GetSpellName(j, BOOKTYPE_SPELL)
+                if n and strfind(n, s) then
+                    i = j
+                    break
+                end
+            end
+            if i then
+                if GetSpellCooldown(i, BOOKTYPE_SPELL) < 1 then
+                    c(s)
+                end
+            end
         end
 
         if UnitAffectingCombat("player") and UnitHealth("player") / UnitHealthMax("player") * 100 < 65 then
-            local c,s=CastSpellByName,SPELL_FADE;local i=nil;for j=1,180 do local n=GetSpellName(j,BOOKTYPE_SPELL);if n and strfind(n,s) then i=j;break;end end if i then if GetSpellCooldown(i,BOOKTYPE_SPELL)<1 then c(s)else end end
+            local c, s = CastSpellByName, SPELL_FADE
+            local i = nil
+            for j = 1, 180 do
+                local n = GetSpellName(j, BOOKTYPE_SPELL)
+                if n and strfind(n, s) then
+                    i = j
+                    break
+                end
+            end
+            if i then
+                if GetSpellCooldown(i, BOOKTYPE_SPELL) < 1 then
+                    c(s)
+                end
+            end
         end
 
         -- Cast Power Word: Shield if health is below 90% and not affected by weakened soul
-        if lowestHealthPercent < 90 and not db("AshesToAshes") and UnitAffectingCombat(lowestHealthUnit) and (UnitMana("player")/UnitManaMax("player"))*100 > 5 then
+        if lowestHealthPercent < 90 and not db("AshesToAshes") and UnitAffectingCombat(lowestHealthUnit) and (UnitMana("player") / UnitManaMax("player")) * 100 > 5 then
             CastSpellByName(SPELL_PWS)
             SpellTargetUnit(lowestHealthUnit)
             return true
         end
-    --    if lowestHealthPercent < 100 and db("Nature_Regenerate") and UnitAffectingCombat(lowestHealthUnit) and (UnitMana("player")/UnitManaMax("player"))*100 > 5 then
-    --        CastSpellByName(SPELL_DISPEL)
-    --        SpellTargetUnit(lowestHealthUnit)
-    --        return true
-    --    end
+
         -- cast renew
-        if lowestHealthPercent < 90 and not b("Renew") and (UnitMana("player")/UnitManaMax("player"))*100 > 10 then
+        if lowestHealthPercent < 90 and not b("Renew") and (UnitMana("player") / UnitManaMax("player")) * 100 > 10 then
             CastSpellByName(SPELL_RENEW)
             SpellTargetUnit(lowestHealthUnit)
             return true
         end
+
         -- Cast Lesser Heal if health is below 70%
-        if lowestHealthPercent < 60 and (UnitMana("player")/UnitManaMax("player"))*100 > 15 then
+        if lowestHealthPercent < 60 and (UnitMana("player") / UnitManaMax("player")) * 100 > 15 then
             CastSpellByName(SPELL_LESSER_HEAL)
             SpellTargetUnit(lowestHealthUnit)
             return true
@@ -182,10 +203,9 @@ local function HealParty()
     return false -- No healing was needed
 end
 
-
 -- Function to assist a party member by casting Smite on their target
 local function AssistPartyMember()
-local mana = (UnitMana("player")/UnitManaMax("player"))*100
+    local mana = (UnitMana("player") / UnitManaMax("player")) * 100
     for i = 1, 4 do
         local partyMember = "party" .. i
         if UnitExists(partyMember) and not UnitIsDeadOrGhost(partyMember) then
@@ -194,36 +214,43 @@ local mana = (UnitMana("player")/UnitManaMax("player"))*100
                 AssistUnit(partyMember)
 
                 if mana > 50 and not buffed(SPELL_SWP, target) then
-
                     CastSpellByName(SPELL_SWP)
-
-                else if mana > 80 and buffed(SPELL_SWP, target) then
-
+                elseif mana > 80 and buffed(SPELL_SWP, target) then
                     local c, s = CastSpellByName, SPELL_MIND_BLAST
                     local i = nil
-                    for j = 1, 180 do local n = GetSpellName(j,BOOKTYPE_SPELL)
-                        if n and strfind(n,s) 
-                            then i=j
+                    for j = 1, 180 do
+                        local n = GetSpellName(j, BOOKTYPE_SPELL)
+                        if n and strfind(n, s) then
+                            i = j
                             break
-                        end 
-                    end 
-                    if i 
-                        then 
-                            if GetSpellCooldown(i,BOOKTYPE_SPELL)<1 then 
-                                c(s)
-                            else 
-                              --  c(SPELL_SMITE)
-                              for i=1,120 do if IsAutoRepeatAction(i) then return end end CastSpellByName("Shoot")
-                            end 
-                        end
-
-                else if mana < 80 and buffed(SPELL_SWP, target) then for i=1,120 do if IsAutoRepeatAction(i) then return end end CastSpellByName("Shoot")
-
-                else if mana < 50 then for i=1,120 do if IsAutoRepeatAction(i) then return end end CastSpellByName("Shoot")
-
-                            end
                         end
                     end
+                    if i then
+                        if GetSpellCooldown(i, BOOKTYPE_SPELL) < 1 then
+                            c(s)
+                        else
+                            for i = 1, 120 do
+                                if IsAutoRepeatAction(i) then
+                                    return
+                                end
+                            end
+                            CastSpellByName("Shoot")
+                        end
+                    end
+                elseif mana < 80 and buffed(SPELL_SWP, target) then
+                    for i = 1, 120 do
+                        if IsAutoRepeatAction(i) then
+                            return
+                        end
+                    end
+                    CastSpellByName("Shoot")
+                elseif mana < 50 then
+                    for i = 1, 120 do
+                        if IsAutoRepeatAction(i) then
+                            return
+                        end
+                    end
+                    CastSpellByName("Shoot")
                 end
             end
         end
@@ -241,26 +268,26 @@ local function FollowPartyMember()
     end
 end
 
+-- Function to handle out-of-mana situations
 local function OOM()
-    local mana = (UnitMana("player")/UnitManaMax("player"))*100
+    local mana = (UnitMana("player") / UnitManaMax("player")) * 100
     if mana < 15 then
-        local c,s=CastSpellByName, SPELL_QDM
-        local i=nil
-        for j=1,180 do local n=GetSpellName(j,BOOKTYPE_SPELL)
-            if n and strfind(n,s) then i=j
+        local c, s = CastSpellByName, SPELL_QDM
+        local i = nil
+        for j = 1, 180 do
+            local n = GetSpellName(j, BOOKTYPE_SPELL)
+            if n and strfind(n, s) then
+                i = j
                 break
-            end 
-        end 
-        if i then if GetSpellCooldown(i,BOOKTYPE_SPELL)<1 then c(s)
+            end
+        end
+        if i then
+            if GetSpellCooldown(i, BOOKTYPE_SPELL) < 1 then
+                c(s)
             end
         end
     end
 end
-
-
-  
-
-
 
 -- Slash command to trigger all functionality
 SLASH_PRIESTHELPER1 = "/ph"
@@ -270,15 +297,12 @@ SlashCmdList["PRIESTHELPER"] = function()
 
     -- If no healing is needed, proceed to buff and assist
     if not healingNeeded then
-        -- Buff party members and myself
         DispelParty()
         BuffParty()
         BuffInnerFire()
-
-        -- Assist party members by casting Smite on their target
         AssistPartyMember()
         FollowPartyMember()
     end
-    OOM()
 
+    OOM()
 end
