@@ -1,4 +1,6 @@
 ## Interface: 11200
 ## Title: PriestHelper
 ## Notes: A helper addon for priests in Vanilla WoW.
+## Author: Ler
+## Version: 1.0.1
 PriestHelper.lua
