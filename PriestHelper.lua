@@ -46,6 +46,16 @@ local function HasDebuff(unit, debuffList)
     end
     return false
 end
+-- Helper function to get the spell index by name
+local function GetSpellIndex(spellName)
+    for i = 1, 180 do
+        local name = GetSpellName(i, BOOKTYPE_SPELL)
+        if name and strfind(name, spellName) then
+            return i
+        end
+    end
+    return nil
+end
 
 -- Function to buff a unit with Power Word: Fortitude if they are not already buffed
 local function BuffUnit(unit)
@@ -255,6 +265,7 @@ end
 -- Function to assist a party member by casting Smite on their target
 local function AssistPartyMember()
     local mana = (UnitMana("player") / UnitManaMax("player")) * 100
+
     for i = 1, 4 do
         local partyMember = "party" .. i
         if UnitExists(partyMember) and not UnitIsDeadOrGhost(partyMember) then
@@ -262,44 +273,27 @@ local function AssistPartyMember()
             if UnitExists(target) and UnitCanAttack("player", target) then
                 AssistUnit(partyMember)
 
+                -- Cast Shadow Word: Pain if mana > 50 and the target doesn't have it
                 if mana > 50 and not buffed(SPELL_SWP, target) then
                     CastSpellByName(SPELL_SWP)
-                elseif mana > 80 and buffed(SPELL_SWP, target) then
-                    local c, s = CastSpellByName, SPELL_MIND_BLAST
-                    local i = nil
-                    for j = 1, 180 do
-                        local n = GetSpellName(j, BOOKTYPE_SPELL)
-                        if n and strfind(n, s) then
-                            i = j
-                            break
-                        end
+                end
+
+                -- Cast Mind Blast if mana > 80 and Shadow Word: Pain is already on the target
+                if mana > 80 and buffed(SPELL_SWP, target) then
+                    local spellIndex = GetSpellIndex(SPELL_MIND_BLAST)
+                    if spellIndex and GetSpellCooldown(spellIndex, BOOKTYPE_SPELL) < 1 then
+                        CastSpellByName(SPELL_MIND_BLAST)
+                    else
+                        -- Fallback to Shoot if Mind Blast is on cooldown
+                    --    for i=1,120 do if IsAutoRepeatAction(i) then return end end 
+                        CastSpellByName(SPELL_SHOOT)
                     end
-                    if i then
-                        if GetSpellCooldown(i, BOOKTYPE_SPELL) < 1 then
-                            c(s)
-                        else
-                            for i = 1, 120 do
-                                if IsAutoRepeatAction(i) then
-                                    return
-                                end
-                            end
-                            CastSpellByName("Shoot")
-                        end
-                    end
-                elseif mana < 80 and buffed(SPELL_SWP, target) then
-                    for i = 1, 120 do
-                        if IsAutoRepeatAction(i) then
-                            return
-                        end
-                    end
-                    CastSpellByName("Shoot")
-                elseif mana < 50 then
-                    for i = 1, 120 do
-                        if IsAutoRepeatAction(i) then
-                            return
-                        end
-                    end
-                    CastSpellByName("Shoot")
+                end
+
+                -- Fallback to Shoot if mana is low or conditions aren't met
+                if mana < 80 or not buffed(SPELL_SWP, target) then
+                --    for i=1,120 do if IsAutoRepeatAction(i) then return end end 
+                    CastSpellByName(SPELL_SHOOT)
                 end
             end
         end
