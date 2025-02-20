@@ -18,6 +18,27 @@ local SPELL_DISPEL = "Dispel Magic"
 local SPELL_CURE_DISEASE = "Cure Disease"
 local HEALTH_THRESHOLD = 70 -- Heal if health is below 90%
 
+-- Timing variables for Shoot toggle
+local lastShootToggleTime = 0
+local shootToggleCooldown = 1.5 -- Toggle Shoot off after 8 seconds
+
+-- Function to check if Shoot is active
+local function IsShootActive()
+    for i = 1, 120 do
+        if IsAutoRepeatAction(i) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Function to toggle Shoot off
+local function ToggleShootOff()
+    if IsShootActive() then
+        CastSpellByName(SPELL_SHOOT) -- Toggle Shoot off
+    end
+end
+
 -- List of debuffs to dispel with Dispel Magic
 local debuffsToDispel = {
     "ShadowWordPain",
@@ -265,6 +286,7 @@ end
 -- Function to assist a party member by casting Smite on their target
 local function AssistPartyMember()
     local mana = (UnitMana("player") / UnitManaMax("player")) * 100
+    local currentTime = GetTime()
 
     for i = 1, 4 do
         local partyMember = "party" .. i
@@ -278,22 +300,26 @@ local function AssistPartyMember()
                     CastSpellByName(SPELL_SWP)
                 end
 
-                -- Cast Mind Blast if mana > 80 and Shadow Word: Pain is already on the target
-                if mana > 80 and buffed(SPELL_SWP, target) then
+                -- Cast Mind Blast if mana > 80, Shadow Word: Pain is on the target, and Mind Blast is off cooldown
+                if mana > 50 and buffed(SPELL_SWP, target) then
                     local spellIndex = GetSpellIndex(SPELL_MIND_BLAST)
                     if spellIndex and GetSpellCooldown(spellIndex, BOOKTYPE_SPELL) < 1 then
+                        -- Toggle Shoot off before casting Mind Blast
+                        ToggleShootOff()
                         CastSpellByName(SPELL_MIND_BLAST)
-                    else
-                        -- Fallback to Shoot if Mind Blast is on cooldown
-                    --    for i=1,120 do if IsAutoRepeatAction(i) then return end end 
-                        CastSpellByName(SPELL_SHOOT)
+                        lastShootToggleTime = currentTime -- Reset the timer
+                        return -- Exit after casting Mind Blast
                     end
                 end
 
-                -- Fallback to Shoot if mana is low or conditions aren't met
-                if mana < 80 or not buffed(SPELL_SWP, target) then
-                --    for i=1,120 do if IsAutoRepeatAction(i) then return end end 
-                    CastSpellByName(SPELL_SHOOT)
+                -- Fallback to Shoot if Mind Blast is on cooldown or conditions aren't met
+                -- Toggle Shoot off after 8 seconds if it's active
+                if IsShootActive() and (currentTime - lastShootToggleTime) >= shootToggleCooldown then
+                    ToggleShootOff()
+                    lastShootToggleTime = currentTime -- Reset the timer
+                elseif not IsShootActive() then
+                    CastSpellByName(SPELL_SHOOT) -- Toggle Shoot on
+                    lastShootToggleTime = currentTime -- Reset the timer
                 end
             end
         end

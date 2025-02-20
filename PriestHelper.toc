@@ -2,5 +2,5 @@
 ## Title: PriestHelper
 ## Notes: A helper addon for priests in Vanilla WoW.
 ## Author: Ler
-## Version: 1.0.2
+## Version: 1.0.3
 PriestHelper.lua
