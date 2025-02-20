@@ -3,7 +3,7 @@ PriestHelper = {}
 
 -- Addon Constants
 local SPELL_PWF = "Power Word: Fortitude"
-local SPELL_LESSER_HEAL = "Flash Heal"
+local SPELL_LESSER_HEAL = "Heal(rank 1)"
 local SPELL_RENEW = "Renew"
 local SPELL_SMITE = "Smite"
 local SPELL_SHOOT = "Shoot"
@@ -15,18 +15,29 @@ local SPELL_FADE = "Fade"
 local SPELL_PSCREAM = "Psychic Scream"
 local SPELL_INNER_FIRE = "Inner Fire"
 local SPELL_DISPEL = "Dispel Magic"
+local SPELL_CURE_DISEASE = "Cure Disease"
 local HEALTH_THRESHOLD = 70 -- Heal if health is below 90%
 
+-- List of debuffs to dispel with Dispel Magic
 local debuffsToDispel = {
     "ShadowWordPain",
+    "Polymorph",
     -- Add more debuff names here as needed
 }
 
-local function HasDebuff(unit)
+-- List of debuffs to cure with Cure Disease
+local diseasesToCure = {
+    "NullifyDisease",
+    "CallofBone",
+    -- Add more disease debuff names here as needed
+}
+
+-- Helper function to check if a unit has a specific debuff
+local function HasDebuff(unit, debuffList)
     for i = 1, 16 do
         local name = UnitDebuff(unit, i)
         if name then
-            for _, debuff in ipairs(debuffsToDispel) do
+            for _, debuff in ipairs(debuffList) do
                 if strfind(name, debuff) then
                     return true
                 end
@@ -46,6 +57,7 @@ local function BuffUnit(unit)
     return false
 end
 
+-- Function to dispel a unit with Dispel Magic
 local function DispelUnit(unit)
     if UnitExists(unit) and not UnitIsDeadOrGhost(unit) then
         CastSpellByName(SPELL_DISPEL)
@@ -55,6 +67,17 @@ local function DispelUnit(unit)
     return false
 end
 
+-- Function to cure a unit with Cure Disease
+local function CureDiseaseUnit(unit)
+    if UnitExists(unit) and not UnitIsDeadOrGhost(unit) then
+        CastSpellByName(SPELL_CURE_DISEASE)
+        SpellTargetUnit(unit)
+        return true
+    end
+    return false
+end
+
+-- Function to buff Inner Fire on the player
 local function BuffInnerFire()
     if not buffed(SPELL_INNER_FIRE, "player") then
         CastSpellByName(SPELL_INNER_FIRE)
@@ -77,8 +100,9 @@ local function BuffParty()
     end
 end
 
+-- Function to dispel debuffs from party members and myself
 local function DispelParty()
-    if HasDebuff("player") then
+    if HasDebuff("player", debuffsToDispel) then
         if UnitExists("target") and UnitCanAttack("player", "target") then
             ClearTarget()
         end
@@ -86,13 +110,38 @@ local function DispelParty()
             return
         end
     end
+
     for i = 1, 4 do
         local partyMember = "party" .. i
-        if HasDebuff(partyMember) then
+        if HasDebuff(partyMember, debuffsToDispel) then
             if UnitExists("target") and UnitCanAttack("player", "target") then
                 ClearTarget()
             end
             if DispelUnit(partyMember) then
+                return
+            end
+        end
+    end
+end
+
+-- Function to cure diseases from party members and myself
+local function CureDiseaseParty()
+    if HasDebuff("player", diseasesToCure) then
+        if UnitExists("target") and UnitCanAttack("player", "target") then
+            ClearTarget()
+        end
+        if CureDiseaseUnit("player") then
+            return
+        end
+    end
+
+    for i = 1, 4 do
+        local partyMember = "party" .. i
+        if HasDebuff(partyMember, diseasesToCure) then
+            if UnitExists("target") and UnitCanAttack("player", "target") then
+                ClearTarget()
+            end
+            if CureDiseaseUnit(partyMember) then
                 return
             end
         end
@@ -298,6 +347,7 @@ SlashCmdList["PRIESTHELPER"] = function()
     -- If no healing is needed, proceed to buff and assist
     if not healingNeeded then
         DispelParty()
+        CureDiseaseParty()
         BuffParty()
         BuffInnerFire()
         AssistPartyMember()
