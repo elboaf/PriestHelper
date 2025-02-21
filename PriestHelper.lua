@@ -209,7 +209,11 @@ end
 local function HealParty()
     local lowestHealthUnit = nil
     local lowestHealthPercent = 100
-
+    local currentHTime = GetTime()
+    -- dont clip flays to heal
+   -- if (currentHTime - lastFlayTime) >= flayDuration then
+   --     return false
+   -- end
     -- Check player's health
     if not UnitIsDeadOrGhost("player") then
         local playerHealth = UnitHealth("player") / UnitHealthMax("player") * 100
@@ -322,12 +326,12 @@ local function AssistPartyMember()
                 AssistUnit(partyMember)
 
                 -- Cast Shadow Word: Pain if mana > 50 and the target doesn't have it
-                if mana > 40 and not buffed(SPELL_SWP, target) then
+                if mana > 70 and not buffed(SPELL_SWP, target) then
                     CastSpellByName(SPELL_SWP)
                 end
 
                 -- Cast Mind Blast if mana > 80, Shadow Word: Pain is on the target, and Mind Blast is off cooldown
-                if mana > 40 and buffed(SPELL_SWP, target) then
+                if mana > 70 and buffed(SPELL_SWP, target) then
                     local spellIndex = GetSpellIndex(SPELL_MIND_BLAST)
                     if spellIndex and GetSpellCooldown(spellIndex, BOOKTYPE_SPELL) < 1 then
                         -- Toggle Shoot off before casting Mind Blast
@@ -338,7 +342,7 @@ local function AssistPartyMember()
                     end
                 end
                                 -- Cast Mind Blast if mana > 80, Shadow Word: Pain is on the target, and Mind Blast is off cooldown
-                if mana > 40 and buffed(SPELL_SWP, target) then
+                if mana > 70 and buffed(SPELL_SWP, target) then
                     local spellIndex = GetSpellIndex(SPELL_MIND_BLAST)
                     if spellIndex and GetSpellCooldown(spellIndex, BOOKTYPE_SPELL) > 1 and (currentTime - lastFlayTime) >= flayDuration then
                         -- Toggle Shoot off before casting Mind Blast
@@ -355,7 +359,7 @@ local function AssistPartyMember()
                 if IsShootActive() and (currentTime - lastShootToggleTime) >= shootToggleCooldown then
                     ToggleShootOff()
                     lastShootToggleTime = currentTime -- Reset the timer
-                elseif not IsShootActive() and mana < 40 then
+                elseif not IsShootActive() and mana < 70 and (currentTime - lastFlayTime) >= flayDuration then
                     CastSpellByName(SPELL_SHOOT) -- Toggle Shoot on
                     lastShootToggleTime = currentTime -- Reset the timer
                 end
