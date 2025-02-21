@@ -3,12 +3,16 @@ PriestHelper = {}
 
 -- Addon Constants
 local SPELL_PWF = "Power Word: Fortitude"
-local SPELL_LESSER_HEAL = "Heal(rank 1)"
+local SPELL_SPIRIT = "Divine Spirit"
+local SPELL_SPROT = "Shadow Protection"
+local SPELL_FWARD = "Fear Ward"
+local SPELL_LESSER_HEAL = "Heal(rank 2)"
 local SPELL_RENEW = "Renew"
 local SPELL_SMITE = "Smite"
 local SPELL_SHOOT = "Shoot"
 local SPELL_SWP = "Shadow Word: Pain"
 local SPELL_MIND_BLAST = "Mind Blast"
+local SPELL_MIND_FLAY = "Mind Flay"
 local SPELL_QDM = "Quel'dorei Meditation"
 local SPELL_PWS = "Power Word: Shield"
 local SPELL_FADE = "Fade"
@@ -21,6 +25,8 @@ local HEALTH_THRESHOLD = 70 -- Heal if health is below 90%
 -- Timing variables for Shoot toggle
 local lastShootToggleTime = 0
 local shootToggleCooldown = 1.5 -- Toggle Shoot off after 8 seconds
+local lastFlayTime = 0
+local flayDuration = 3
 
 -- Function to check if Shoot is active
 local function IsShootActive()
@@ -43,6 +49,7 @@ end
 local debuffsToDispel = {
     "ShadowWordPain",
     "Polymorph",
+    "Immolation",
     -- Add more debuff names here as needed
 }
 
@@ -85,6 +92,25 @@ local function BuffUnit(unit)
         SpellTargetUnit(unit)
         return true
     end
+    if UnitExists(unit) and not UnitIsDeadOrGhost(unit) and not buffed(SPELL_SPIRIT, unit) then
+        CastSpellByName(SPELL_SPIRIT)
+        SpellTargetUnit(unit)
+        return true
+    end
+    if UnitExists(unit) and not UnitIsDeadOrGhost(unit) and not buffed(SPELL_SPROT, unit) then
+        CastSpellByName(SPELL_SPROT)
+        SpellTargetUnit(unit)
+        return true
+    end
+    local spellIndex = GetSpellIndex(SPELL_FWARD)
+    if spellIndex and GetSpellCooldown(spellIndex, BOOKTYPE_SPELL) < 1 then
+    if UnitExists(unit) and not UnitIsDeadOrGhost(unit) and not buffed(SPELL_FWARD, unit) then
+        CastSpellByName(SPELL_FWARD)
+        SpellTargetUnit(unit)
+        return true
+        end 
+    end
+
     return false
 end
 
@@ -296,17 +322,29 @@ local function AssistPartyMember()
                 AssistUnit(partyMember)
 
                 -- Cast Shadow Word: Pain if mana > 50 and the target doesn't have it
-                if mana > 50 and not buffed(SPELL_SWP, target) then
+                if mana > 40 and not buffed(SPELL_SWP, target) then
                     CastSpellByName(SPELL_SWP)
                 end
 
                 -- Cast Mind Blast if mana > 80, Shadow Word: Pain is on the target, and Mind Blast is off cooldown
-                if mana > 50 and buffed(SPELL_SWP, target) then
+                if mana > 40 and buffed(SPELL_SWP, target) then
                     local spellIndex = GetSpellIndex(SPELL_MIND_BLAST)
                     if spellIndex and GetSpellCooldown(spellIndex, BOOKTYPE_SPELL) < 1 then
                         -- Toggle Shoot off before casting Mind Blast
                         ToggleShootOff()
                         CastSpellByName(SPELL_MIND_BLAST)
+                        lastShootToggleTime = currentTime -- Reset the timer
+                        return -- Exit after casting Mind Blast
+                    end
+                end
+                                -- Cast Mind Blast if mana > 80, Shadow Word: Pain is on the target, and Mind Blast is off cooldown
+                if mana > 40 and buffed(SPELL_SWP, target) then
+                    local spellIndex = GetSpellIndex(SPELL_MIND_BLAST)
+                    if spellIndex and GetSpellCooldown(spellIndex, BOOKTYPE_SPELL) > 1 and (currentTime - lastFlayTime) >= flayDuration then
+                        -- Toggle Shoot off before casting Mind Blast
+                        ToggleShootOff()
+                        CastSpellByName(SPELL_MIND_FLAY)
+                        lastFlayTime = currentTime
                         lastShootToggleTime = currentTime -- Reset the timer
                         return -- Exit after casting Mind Blast
                     end
@@ -317,7 +355,7 @@ local function AssistPartyMember()
                 if IsShootActive() and (currentTime - lastShootToggleTime) >= shootToggleCooldown then
                     ToggleShootOff()
                     lastShootToggleTime = currentTime -- Reset the timer
-                elseif not IsShootActive() then
+                elseif not IsShootActive() and mana < 40 then
                     CastSpellByName(SPELL_SHOOT) -- Toggle Shoot on
                     lastShootToggleTime = currentTime -- Reset the timer
                 end
