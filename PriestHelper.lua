@@ -11,7 +11,9 @@ local SPELL_RENEW = "Renew"
 local SPELL_SMITE = "Smite"
 local SPELL_SHOOT = "Shoot"
 local SPELL_SWP = "Shadow Word: Pain"
+local SPELL_SWP2 = "Shadow Word: Pain(Rank 3)"
 local SPELL_MIND_BLAST = "Mind Blast"
+local SPELL_MIND_BLAST2 = "Mind Blast(Rank 3)"
 local SPELL_MIND_FLAY = "Mind Flay"
 local SPELL_QDM = "Quel'dorei Meditation"
 local SPELL_PWS = "Power Word: Shield"
@@ -327,7 +329,7 @@ local function AssistPartyMember()
 
                 -- Cast Shadow Word: Pain if mana > 50 and the target doesn't have it
                 if mana > 70 and not buffed(SPELL_SWP, target) then
-                    CastSpellByName(SPELL_SWP)
+                    CastSpellByName(SPELL_SWP2)
                 end
 
                 -- Cast Mind Blast if mana > 80, Shadow Word: Pain is on the target, and Mind Blast is off cooldown
@@ -336,7 +338,7 @@ local function AssistPartyMember()
                     if spellIndex and GetSpellCooldown(spellIndex, BOOKTYPE_SPELL) < 1 then
                         -- Toggle Shoot off before casting Mind Blast
                         ToggleShootOff()
-                        CastSpellByName(SPELL_MIND_BLAST)
+                        CastSpellByName(SPELL_MIND_BLAST2)
                         lastShootToggleTime = currentTime -- Reset the timer
                         return -- Exit after casting Mind Blast
                     end
